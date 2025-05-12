@@ -6,7 +6,7 @@ module "mcp_tool_iac_template" {
   lambda_architecture = "arm64"
   lambda_timeout = 300
   lambda_memory = 1024
-  attach_lambda_arch_change_policy = true
+  attach_lambda_policy = true
   region = "ap-northeast-2"
   profile = "costnorm"
 }
