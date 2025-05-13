@@ -1,6 +1,7 @@
 import boto3
 from botocore.exceptions import ClientError
 import json
+import requests
 
 def update_lambda_architecture(function_name: str, target_arch: str = "arm64") -> dict:
     """
@@ -17,8 +18,8 @@ def update_lambda_architecture(function_name: str, target_arch: str = "arm64") -
 
     try:
         # 현재 설정 조회
-        config = client.get_function_configuration(FunctionName=function_name)
-        current_archs = config.get("Architectures", ["x86_64"])
+        config = client.get_function(FunctionName=function_name)
+        current_archs = config.get("Configuration", {}).get("Architectures", ["x86_64"])
 
         if target_arch in current_archs:
             return {
@@ -26,16 +27,30 @@ def update_lambda_architecture(function_name: str, target_arch: str = "arm64") -
                 "message": f"{function_name} already uses {target_arch}"
             }
 
+        # 현재 코드 패키지 URL 가져오기
+        code_url = config.get('Code', {}).get('Location')
+        if not code_url:
+            return {
+                "success": False,
+                "message": "Could not get function code URL"
+            }
+            
+        print(code_url)
+            
+        # 코드 패키지 다운로드
+        code_package = requests.get(code_url).content
+            
         # 아키텍처 변경
-        response = client.update_function_configuration(
+        response = client.update_function_code(
             FunctionName=function_name,
+            ZipFile=code_package,
             Architectures=[target_arch]
         )
 
         return {
             "success": True,
             "message": f"{function_name} architecture updated to {target_arch}",
-            "update_response": response
+            "update_response": {k: str(v) for k, v in response.items() if k != 'ResponseMetadata'}
         }
 
     except ClientError as e:
