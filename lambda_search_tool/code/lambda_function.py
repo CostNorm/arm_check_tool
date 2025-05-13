@@ -2,7 +2,7 @@ import boto3
 import difflib
 import json
 
-def search_lambdas(query: str = None, only_x86: bool = True, cutoff: float = 0.3, max_results: int = 50):
+def search_lambdas(query: str = None, only_x86: bool = False, cutoff: float = 0.3, max_results: int = 50, region: str = "ap-northeast-2"):
     """
     검색어와 아키텍처 조건에 따라 Lambda 함수 목록을 필터링합니다.
 
@@ -11,11 +11,12 @@ def search_lambdas(query: str = None, only_x86: bool = True, cutoff: float = 0.3
         only_x86 (bool): True면 x86_64만 필터링
         cutoff (float): fuzzy match 정확도 컷오프 (0.0 ~ 1.0)
         max_results (int): 최대 반환 함수 수
+        region (str, optional): AWS region 이름 (예: 'us-east-1')
 
     Returns:
         list[dict]: Lambda 함수 정보 목록
     """
-    client = boto3.client('lambda')
+    client = boto3.client('lambda', region_name=region)
     all_functions = []
     next_marker = None
 
@@ -67,11 +68,11 @@ def search_lambdas(query: str = None, only_x86: bool = True, cutoff: float = 0.3
 def lambda_handler(event, context):
     """
     AWS Lambda 함수 핸들러
-    
+
     Args:
         event (dict): Lambda 이벤트 데이터
         context (object): Lambda 컨텍스트 객체
-        
+
     Returns:
         dict: API Gateway에 맞는 응답 형식
     """
@@ -81,15 +82,17 @@ def lambda_handler(event, context):
         only_x86 = event.get('only_x86', True)
         cutoff = event.get('cutoff', 0.3)
         max_results = event.get('max_results', 50)
-        
+        region = event.get('region')
+
         # Call the search function
         results = search_lambdas(
             query=query,
             only_x86=only_x86,
             cutoff=cutoff,
-            max_results=max_results
+            max_results=max_results,
+            region=region
         )
-        
+
         # Return properly formatted response
         return {
             'statusCode': 200,
